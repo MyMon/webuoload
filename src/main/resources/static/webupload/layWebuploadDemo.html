@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>webupload大文件上传</title>
+    <meta name="renderer" content="webkit">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link rel="stylesheet" href="layui/css/layui.css" media="all">
+    <script type="text/javascript" src="js/jquery-1.10.2.min.js" charset="utf-8"></script>
+</head>
+<body>
+<div class="layui-btn-container" style="margin: 5px 0 0px 20px;margin-bottom:-10px;">
+    <button class="layui-btn layui-btn-sm" id="uploadFileBtn" >上传文件</button>
+    <button class="layui-btn layui-btn-sm" onclick="window.location.reload()" >刷新表格</button>
+    <button class="layui-btn layui-btn-sm" id="getUploadFileDataBtn">获取当前实例中文件数据</button>
+</div>
+<table id="fileList" lay-filter="fileList"></table>
+<div style="margin: 20px 50px;display: none;" id="webupload_box">
+    <div id="file_table_box"></div>
+    <div>
+        <button class="layui-btn layui-btn-sm" id="printUploadFileDataBtn">打印打钱数据</button>
+    </div>
+</div>
+
+<script src="layui/layui.js" charset="utf-8"></script>
+<script type="text/javascript">
+    var domain=window.location.protocol+"//"+window.location.host;
+    layui.config({
+        base: domain+'/webupload/layui_exts'
+    }).extend({
+        layWebupload: '/webupload/layWebupload'
+    });
+    layui.use(['table','layWebupload'], function(){
+        var table = layui.table;
+        var layWebupload=layui.layWebupload;
+        var layWebuploadIns;
+        var url=domain+"/upload/fileRecord/"
+        console.log("layWebupload:",layWebupload)
+        //第一个实例
+        table.render({
+            elem: '#fileList'
+            ,method:"post"
+            // ,height: 312
+            ,url: url+'getList' //数据接口
+            ,page: true //开启分页
+            ,cols: [[ //表头
+                {field: 'id', title: 'ID'}
+                ,{field: 'orgName', title: '原文件名' }
+                ,{field: 'serverLocalName', title: '系统文件名'}
+                ,{field: 'serverLocalPath', title: '服务存储路径'}
+                ,{field: 'networkPath', title: '网络访问地址',templet:function (d) {
+                        return domain+d.networkPath;
+                    }}
+                ,{field: 'uploadType', title: '上传类型',templet:function (d) {
+                        return d.uploadType==1?'普通文件':'用户头像';
+                    }}
+                ,{field: 'md5Value', title: '文件MD5'}
+                ,{field: 'fileSize', title: '文件大小',templet:function (d) {
+                        return formatFileSize(d.fileSize);
+                    }}
+                ,{field: 'uploadDevice', title: '设备信息'}
+                ,{field: 'uploadIp', title: '设备IP'}
+                ,{field: 'createTime', title: '上传日期'}
+            ]]
+           , request: {
+                pageName: 'page' //页码的参数名称，默认：page
+                ,limitName: 'size' //每页数据量的参数名，默认：limit
+            }
+            ,response: {
+                statusCode: 10000 //规定成功的状态码，默认：0
+            }
+            ,parseData:function(res){ //res 即为原始返回的数据
+                return {
+                    "code": res.code, //解析接口状态
+                    "msg": res.message, //解析提示文本
+                    "count": res.data.total, //解析数据长度
+                    "data": res.data.rows //解析数据列表
+                };
+            }
+            ,page: true
+            ,limits: [10, 20, 30, 50, 100,200]
+            ,limit: 10
+        });
+
+        $("#uploadFileBtn").click(function () {//重点
+            var fileType=''
+            //常见图片
+            fileType+="gif,png,jpeg,jpg";
+            //常见的视频
+            fileType+="cd,wave,aife,mpeg,mp3,mpeg-4,midi,wma,realaudio,vqf,oggvorbis,amr,ape,flac,aac";
+            //常见音频
+            fileType+=",avi,mov,rmvb,rm,flv,mp4,3gpavi,mov,3gp,exe,jar"
+
+            layWebuploadIns=layWebupload.render({
+                url: url+'/zone/upload',//上传文件服务器地址，必填
+                fileCheckUrl:url+'/zone/upload/md5Check',//文件校验地址
+                checkChunkUrl:url+'/zone/upload/md5Check',//文件块校验地址
+                mergeChunksUrl:url+'/zone/upload/merge/',//文件合并地址
+                size:5*1024*1024*1024,//单个文件大小，有默认值，可不填
+                fileType:fileType,//允许上传文件格式,有默认值，可不填
+                fileBoxEle:"#file_table_box",//上传容器
+                fileNumLimit:500,//上限500个文件
+                // headers:{//headers参数传递,根据自己需要添加
+                //     Authorization:new Date().getTime()
+                // }
+            });
+            openEditPanel("文件上传","webupload_box")
+        });
+        /**
+         * 获取实例中上传数据
+         ***/
+        $("#getUploadFileDataBtn").click(function () {
+            if(layWebuploadIns!=null&&layWebuploadIns!=undefined){
+                var nowData=layWebuploadIns.getData();
+                layer.msg("已经在控制台打印了，请按F12查看");
+                console.log("当前实例中数据:",nowData)
+            }else{
+                layer.msg("没有上传文件，请先上传文件");
+            }
+        });
+        $("#printUploadFileDataBtn").click(function () {
+            if(layWebuploadIns!=null&&layWebuploadIns!=undefined){
+                var nowData=layWebuploadIns.getData();
+                layer.msg("已经在控制台打印了，请按F12查看");
+                console.log("当前实例中数据:",nowData)
+            }else{
+                layer.msg("没有上传文件，请先上传文件");
+            }
+        });
+        function formatFileSize(size){
+            var fileSize =0;
+            if(size/1024>1024){
+                var len = size/1024/1024;
+                fileSize = len.toFixed(2) +"MB";
+            }else if(size/1024/1024>1024){
+                var len = size/1024/1024;
+                fileSize = len.toFixed(2)+"GB";
+            }else{
+                var len = size/1024;
+                fileSize = len.toFixed(2)+"KB";
+            }
+            return fileSize;
+        };
+        /**
+         * 弹窗面板
+         */
+        function openEditPanel(title,modelId,w,h) {
+            if (title == null || title == '') {
+                title = false;
+            }
+            ;
+
+            if (w == null || w == '') {
+                w=600;
+            }
+            ;
+            if (h == null || h == '') {
+                h='auto';
+            }else{
+                h=h+"px";
+            }
+            ;
+            var index =layer.open({
+                type: 1,
+                area: [w + 'px', h],
+                fix: false,
+                maxmin: true,
+                shadeClose: false,
+                zIndex:50,
+                shade: 0.4,
+                title: title,
+                content: $("#"+modelId)
+            });
+            return index;
+        }
+    })
+</script>
+</body>
+</html>

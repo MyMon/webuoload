@@ -1,0 +1,69 @@
+# tomcat 相关配置
+server:
+  port: 8080
+  servlet:
+    context-path: /
+  tomcat:
+    uri-encoding: UTF-8
+# MYSQ 相关配置
+spring:
+  application:
+    name: webupload-server-file #指定服务名
+  servlet:
+    multipart: #文件上传配置
+      max-file-size: 2048MB
+      max-request-size: 2048MB
+  datasource:
+    driver-class-name: com.mysql.jdbc.Driver
+    druid:
+      url: jdbc:mysql://192.168.8.9:3306/hl?useUnicode=true&characterEncoding=UTF-8&serverTimezone=GMT%2B8
+      username: root
+      password: 123456
+    tomcat:
+      max-idle: 8
+      min-idle: 8
+      initial-size: 10
+  cache:
+    ehcache:
+      config: classpath:/ehcache.xml
+
+#mybaits-plus
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**Mapper.xml
+  #实体扫描，多个package用逗号或者分号分隔
+  typeAliasesPackage: com.webupload.demo.webupload.entity
+  global-config:
+    #逻辑删除配置（下面3个配置）
+    db-config:
+      logic-delete-value: -1
+      logic-not-delete-value: 1
+      id-type: auto
+      #驼峰下划线转换
+      column-underline: true
+      db-type: mysql
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    call-setters-on-nulls: true
+
+jwt:
+  config:
+    key: itcast
+    ttl: 604800
+#文件上传配置
+fileupload:
+  config:
+    # 文件上传目录
+    #uploadFolder: /usr/local/upload
+    uploadFolder: c://webupload/
+    #静态资源对外暴露的访问路径(访问图片的路径)
+    staticAccessPath: storage/**
+    # 设备截图文件保存路径(文件存在具体的文件夹的路径)
+    localPath: fileData/
+    #用户头像存放
+    userHeaderPicPath: user/
+    #档案文件存放
+    archivesFilePath: webuploadfile/
+    #访问域名和端口
+    domain: http://192.168.8.9:${server.port}${server.servlet.context-path}
